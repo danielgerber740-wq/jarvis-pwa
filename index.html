@@ -223,7 +223,7 @@
       statusBadge.innerText = 'PENSANDO...';
 
       try {
-        const response = await fetch('/api/chat.js', {
+        const response = await fetch('/api/chatjs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mensagem: comando })
