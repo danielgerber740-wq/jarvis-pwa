@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0f1d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>JARVIS System</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #050811;
+      color: #00f0ff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    /* Header / Status */
+    header {
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+      background: rgba(10, 15, 29, 0.8);
+      backdrop-filter: blur(8px);
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+
+    .status-badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: #70a1ff;
+      letter-spacing: 1px;
+    }
+
+    /* Area de Chat */
+    #chat-container {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .user-msg {
+      align-self: flex-end;
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .jarvis-msg {
+      align-self: flex-start;
+      background: rgba(15, 25, 45, 0.8);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      color: #00f0ff;
+      border-bottom-left-radius: 2px;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.05);
+    }
+
+    /* Painel de Controle e Botão de Voz */
+    #controls {
+      padding: 16px;
+      background: rgba(10, 15, 29, 0.9);
+      border-top: 1px solid rgba(0, 240, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .input-row {
+      display: flex;
+      width: 100%;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: rgba(5, 8, 17, 0.8);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #00f0ff;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+    }
+
+    button.send-btn {
+      background: #00f0ff;
+      border: none;
+      color: #050811;
+      padding: 0 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Botão de Microfone Estilo Arc Reactor */
+    .mic-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.2) 0%, rgba(5,8,17,1) 70%);
+      border: 2px solid #00f0ff;
+      color: #00f0ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .mic-btn.listening {
+      border-color: #ff3366;
+      color: #ff3366;
+      box-shadow: 0 0 25px rgba(255, 51, 102, 0.8);
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .mic-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>JARVIS</h1>
+    <div class="status-badge" id="status">SISTEMA PRONTO</div>
+  </header>
+
+  <div id="chat-container">
+    <div class="message jarvis-msg">
+      Sistemas online, Senhor. Como posso ajudar?
+    </div>
+  </div>
+
+  <div id="controls">
+    <button class="mic-btn" id="micBtn" aria-label="Ativar microfone">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+      </svg>
+    </button>
+
+    <div class="input-row">
+      <input type="text" id="userInput" placeholder="Digite um comando..." autocomplete="off">
+      <button class="send-btn" id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const statusBadge = document.getElementById('status');
+
+    // Configuração de Sintetizador de Voz (Text-to-Speech)
+    function falar(texto) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Cancela falas anteriores
+        const utterance = new SpeechSynthesisUtterance(texto);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 1.0;
+        utterance.pitch = 0.9; // Tom levemente mais grave estilo Jarvis
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    // Adicionar mensagem na tela
+    function addMessage(text, sender) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', sender === 'user' ? 'user-msg' : 'jarvis-msg');
+      msgDiv.innerText = text;
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Processar comandos (simulação local + ponto de conexão para API)
+    async function processarComando(comando) {
+      if (!comando.trim()) return;
+
+      addMessage(comando, 'user');
+      userInput.value = '';
+      statusBadge.innerText = 'PROCESSANDO...';
+
+      // Ponto de integração: Substitua esta função pelo fetch para sua API Backend
+      setTimeout(() => {
+        let resposta = "Comando recebido. Aguardando conexão com o servidor de inteligência.";
+        
+        const cmdLower = comando.toLowerCase();
+        if (cmdLower.includes('hora') || cmdLower.includes('horas')) {
+          const agora = new Date();
+          resposta = `Agora são ${agora.getHours()} horas e ${agora.getMinutes()} minutos.`;
+        } else if (cmdLower.includes('status')) {
+          resposta = "Todos os sistemas operando com 100% de eficiência.";
+        }
+
+        addMessage(resposta, 'jarvis');
+        falar(resposta);
+        statusBadge.innerText = 'SISTEMA PRONTO';
+      }, 600);
+    }
+
+    // Configuração do Reconhecimento de Voz (Speech Recognition)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      let isListening = false;
+
+      micBtn.addEventListener('click', () => {
+        if (isListening) {
+          recognition.stop();
+        } else {
+          recognition.start();
+        }
+      });
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('listening');
+        statusBadge.innerText = 'OUVINDO...';
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        statusBadge.innerText = 'SISTEMA PRONTO';
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        processarComando(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Erro de voz:', event.error);
+        statusBadge.innerText = 'ERRO DE VOZ';
+      };
+    } else {
+      micBtn.style.display = 'none';
+      statusBadge.innerText = 'RECONHECIMENTO DE VOZ NÃO SUPORTADO';
+    }
+
+    // Eventos de envio por texto
+    sendBtn.addEventListener('click', () => processarComando(userInput.value));
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') processarComando(userInput.value);
+    });
+  </script>
+</body>
+</html>
