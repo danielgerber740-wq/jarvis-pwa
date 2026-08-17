@@ -200,19 +200,17 @@
     const micBtn = document.getElementById('micBtn');
     const statusBadge = document.getElementById('status');
 
-    // Configuração de Sintetizador de Voz (Text-to-Speech)
     function falar(texto) {
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Cancela falas anteriores
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'pt-BR';
         utterance.rate = 1.0;
-        utterance.pitch = 0.9; // Tom levemente mais grave estilo Jarvis
+        utterance.pitch = 0.9;
         window.speechSynthesis.speak(utterance);
       }
     }
 
-    // Adicionar mensagem na tela
     function addMessage(text, sender) {
       const msgDiv = document.createElement('div');
       msgDiv.classList.add('message', sender === 'user' ? 'user-msg' : 'jarvis-msg');
@@ -220,39 +218,38 @@
       chatContainer.appendChild(msgDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-  //ProcessarComando
-  async function processarComando(comando) {
-  if (!comando.trim()) return;
 
-  addMessage(comando, 'user');
-  userInput.value = '';
-  statusBadge.innerText = 'PENSANDO...';
+    async function processarComando(comando) {
+      if (!comando.trim()) return;
 
-  try {
-    const response = await fetch('/api/chat.js', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mensagem: comando })
-    });
+      addMessage(comando, 'user');
+      userInput.value = '';
+      statusBadge.innerText = 'PENSANDO...';
 
-    const data = await response.json();
+      try {
+        const response = await fetch('/api/chatjs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mensagem: comando })
+        });
 
-    if (data.resposta) {
-      addMessage(data.resposta, 'jarvis');
-      falar(data.resposta);
-    } else {
-      throw new Error(data.error);
+        const data = await response.json();
+
+        if (data.resposta) {
+          addMessage(data.resposta, 'jarvis');
+          falar(data.resposta);
+        } else {
+          throw new Error(data.error);
+        }
+      } catch (error) {
+        const msgErro = "Desculpe, ocorreu uma falha de conexão.";
+        addMessage(msgErro, 'jarvis');
+        falar(msgErro);
+      } finally {
+        statusBadge.innerText = 'SISTEMA PRONTO';
+      }
     }
-  } catch (error) {
-    const msgErro = "Desculpe, ocorreu uma falha de conexão.";
-    addMessage(msgErro, 'jarvis');
-    falar(msgErro);
-  } finally {
-    statusBadge.innerText = 'SISTEMA PRONTO';
-  }
-}
 
-    // Configuração do Reconhecimento de Voz (Speech Recognition)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (SpeechRecognition) {
@@ -297,7 +294,6 @@
       statusBadge.innerText = 'RECONHECIMENTO DE VOZ NÃO SUPORTADO';
     }
 
-    // Eventos de envio por texto
     sendBtn.addEventListener('click', () => processarComando(userInput.value));
     userInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') processarComando(userInput.value);
