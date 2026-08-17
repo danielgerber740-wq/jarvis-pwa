@@ -221,31 +221,36 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    // Processar comandos (simulação local + ponto de conexão para API)
-    async function processarComando(comando) {
-      if (!comando.trim()) return;
+  async function processarComando(comando) {
+  if (!comando.trim()) return;
 
-      addMessage(comando, 'user');
-      userInput.value = '';
-      statusBadge.innerText = 'PROCESSANDO...';
+  addMessage(comando, 'user');
+  userInput.value = '';
+  statusBadge.innerText = 'PENSANDO...';
 
-      // Ponto de integração: Substitua esta função pelo fetch para sua API Backend
-      setTimeout(() => {
-        let resposta = "Comando recebido. Aguardando conexão com o servidor de inteligência.";
-        
-        const cmdLower = comando.toLowerCase();
-        if (cmdLower.includes('hora') || cmdLower.includes('horas')) {
-          const agora = new Date();
-          resposta = `Agora são ${agora.getHours()} horas e ${agora.getMinutes()} minutos.`;
-        } else if (cmdLower.includes('status')) {
-          resposta = "Todos os sistemas operando com 100% de eficiência.";
-        }
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mensagem: comando })
+    });
 
-        addMessage(resposta, 'jarvis');
-        falar(resposta);
-        statusBadge.innerText = 'SISTEMA PRONTO';
-      }, 600);
+    const data = await response.json();
+
+    if (data.resposta) {
+      addMessage(data.resposta, 'jarvis');
+      falar(data.resposta);
+    } else {
+      throw new Error(data.error);
     }
+  } catch (error) {
+    const msgErro = "Desculpe, ocorreu uma falha de conexão.";
+    addMessage(msgErro, 'jarvis');
+    falar(msgErro);
+  } finally {
+    statusBadge.innerText = 'SISTEMA PRONTO';
+  }
+}
 
     // Configuração do Reconhecimento de Voz (Speech Recognition)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
