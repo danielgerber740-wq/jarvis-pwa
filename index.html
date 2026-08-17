@@ -220,7 +220,7 @@
       chatContainer.appendChild(msgDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
-
+  //ProcessarComando
   async function processarComando(comando) {
   if (!comando.trim()) return;
 
@@ -229,7 +229,7 @@
   statusBadge.innerText = 'PENSANDO...';
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/api/chat.js', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mensagem: comando })
