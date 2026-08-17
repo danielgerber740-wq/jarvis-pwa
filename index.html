@@ -27,7 +27,6 @@
       overflow: hidden;
     }
 
-    /* Header / Status */
     header {
       padding: 16px;
       text-align: center;
@@ -51,7 +50,6 @@
       letter-spacing: 1px;
     }
 
-    /* Area de Chat */
     #chat-container {
       flex: 1;
       padding: 16px;
@@ -87,7 +85,6 @@
       box-shadow: 0 0 10px rgba(0, 240, 255, 0.05);
     }
 
-    /* Painel de Controle e Botão de Voz */
     #controls {
       padding: 16px;
       background: rgba(10, 15, 29, 0.9);
@@ -130,7 +127,6 @@
       cursor: pointer;
     }
 
-    /* Botão de Microfone Estilo Arc Reactor */
     .mic-btn {
       width: 64px;
       height: 64px;
@@ -219,7 +215,7 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-   async function processarComando(comando) {
+    async function processarComando(comando) {
       if (!comando.trim()) return;
 
       addMessage(comando, 'user');
@@ -227,7 +223,7 @@
       statusBadge.innerText = 'PENSANDO...';
 
       try {
-        const response = await fetch('/api/chatjs', {
+        const response = await fetch('/api/chat.js', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mensagem: comando })
@@ -239,12 +235,10 @@
           addMessage(data.resposta, 'jarvis');
           falar(data.resposta);
         } else {
-          // Exibe o erro exato vindo da API no chat
           const erroDetalhado = data.error || `Erro HTTP ${response.status}`;
           addMessage(`Erro no servidor: ${erroDetalhado}`, 'jarvis');
         }
       } catch (error) {
-        // Exibe falhas de rede de fato (ex: rota /api/chatjs não encontrada)
         addMessage(`Falha de rede: ${error.message}`, 'jarvis');
       } finally {
         statusBadge.innerText = 'SISTEMA PRONTO';
