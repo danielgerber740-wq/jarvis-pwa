@@ -3,11 +3,16 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  const { mensagem } = req.body;
+  // Recebe o histórico completo de mensagens
+  const { historico } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ error: 'Chave de API não configurada na Vercel.' });
+  }
+
+  if (!historico || !Array.isArray(historico)) {
+    return res.status(400).json({ error: 'Formato de histórico inválido.' });
   }
 
   try {
@@ -27,7 +32,8 @@ module.exports = async function handler(req, res) {
               4. Mantenha o tom calmo, levemente sofisticado, extremamente prestativo e com respostas diretas e curtas (ideais para conversação por áudio).`
             }]
           },
-          contents: [{ parts: [{ text: mensagem }] }]
+          // Passa todo o histórico para manter a memória do contexto
+          contents: historico
         })
       }
     );
