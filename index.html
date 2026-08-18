@@ -171,7 +171,7 @@
 
   <div id="chat-container">
     <div class="message jarvis-msg">
-      Sistemas online, Senhor. Como posso ajudar?
+      Sistemas online, Senhor Gerber. Como posso ajudar?
     </div>
   </div>
 
@@ -196,6 +196,26 @@
     const micBtn = document.getElementById('micBtn');
     const statusBadge = document.getElementById('status');
 
+    const STORAGE_HISTORICO_API = 'jarvis_historico_api';
+    const STORAGE_HISTORICO_CHAT = 'jarvis_historico_chat';
+
+    let historicoConversa = JSON.parse(localStorage.getItem(STORAGE_HISTORICO_API)) || [];
+    let historicoChatVisual = JSON.parse(localStorage.getItem(STORAGE_HISTORICO_CHAT)) || [];
+
+    function salvarNoLocalStorage() {
+      localStorage.setItem(STORAGE_HISTORICO_API, JSON.stringify(historicoConversa));
+      localStorage.setItem(STORAGE_HISTORICO_CHAT, JSON.stringify(historicoChatVisual));
+    }
+
+    function carregarMensagensSalvas() {
+      if (historicoChatVisual.length > 0) {
+        chatContainer.innerHTML = '';
+        historicoChatVisual.forEach(item => {
+          renderizarMensagemNaTela(item.text, item.sender);
+        });
+      }
+    }
+
     function falar(texto) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -207,7 +227,7 @@
       }
     }
 
-    function addMessage(text, sender) {
+    function renderizarMensagemNaTela(text, sender) {
       const msgDiv = document.createElement('div');
       msgDiv.classList.add('message', sender === 'user' ? 'user-msg' : 'jarvis-msg');
       msgDiv.innerText = text;
@@ -215,18 +235,51 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
+    function addMessage(text, sender) {
+      renderizarMensagemNaTela(text, sender);
+      historicoChatVisual.push({ text, sender });
+      salvarNoLocalStorage();
+    }
+
+    function limparMemoria() {
+      localStorage.removeItem(STORAGE_HISTORICO_API);
+      localStorage.removeItem(STORAGE_HISTORICO_CHAT);
+      historicoConversa = [];
+      historicoChatVisual = [];
+      chatContainer.innerHTML = `
+        <div class="message jarvis-msg">
+          Memória reiniciada, Senhor Gerber. Como posso ajudar?
+        </div>
+      `;
+    }
+
     async function processarComando(comando) {
       if (!comando.trim()) return;
+
+      if (comando.toLowerCase().trim() === 'limpar memória' || comando.toLowerCase().trim() === '/clear') {
+        userInput.value = '';
+        limparMemoria();
+        return;
+      }
 
       addMessage(comando, 'user');
       userInput.value = '';
       statusBadge.innerText = 'PENSANDO...';
 
+      historicoConversa.push({
+        role: 'user',
+        parts: [{ text: comando }]
+      });
+
+      if (historicoConversa.length > 10) {
+        historicoConversa = historicoConversa.slice(-10);
+      }
+
       try {
         const response = await fetch('/api/chatjs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mensagem: comando })
+          body: JSON.stringify({ historico: historicoConversa })
         });
 
         const data = await response.json();
@@ -234,12 +287,26 @@
         if (response.ok && data.resposta) {
           addMessage(data.resposta, 'jarvis');
           falar(data.resposta);
+
+          historicoConversa.push({
+            role: 'model',
+            parts: [{ text: data.resposta }]
+          });
+          salvarNoLocalStorage();
         } else {
+          historicoConversa.pop();
+          historicoChatVisual.pop();
+          salvarNoLocalStorage();
+
           const erroDetalhado = data.error || `Erro HTTP ${response.status}`;
-          addMessage(`Erro no servidor: ${erroDetalhado}`, 'jarvis');
+          renderizarMensagemNaTela(`Erro no servidor: ${erroDetalhado}`, 'jarvis');
         }
       } catch (error) {
-        addMessage(`Falha de rede: ${error.message}`, 'jarvis');
+        historicoConversa.pop();
+        historicoChatVisual.pop();
+        salvarNoLocalStorage();
+
+        renderizarMensagemNaTela(`Falha de rede: ${error.message}`, 'jarvis');
       } finally {
         statusBadge.innerText = 'SISTEMA PRONTO';
       }
@@ -293,6 +360,8 @@
     userInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') processarComando(userInput.value);
     });
+
+    carregarMensagensSalvas();
   </script>
 </body>
 </html>
