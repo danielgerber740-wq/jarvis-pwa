@@ -217,7 +217,7 @@
     }
 
     function falar(texto) {
-      if ('speechSynthesis' in window) {
+      if ('speechSynthesis' in window && texto.trim()) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'pt-BR';
@@ -233,6 +233,7 @@
       msgDiv.innerText = text;
       chatContainer.appendChild(msgDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
+      return msgDiv;
     }
 
     function addMessage(text, sender) {
@@ -271,9 +272,14 @@
         parts: [{ text: comando }]
       });
 
-      if (historicoConversa.length > 10) {
-        historicoConversa = historicoConversa.slice(-10);
+      // Reduzido para os últimos 6 turnos para maior velocidade
+      if (historicoConversa.length > 6) {
+        historicoConversa = historicoConversa.slice(-6);
       }
+
+      // Cria a bolha vazia do JARVIS na tela para preencher via streaming
+      const jarvisMsgElement = renderizarMensagemNaTela('', 'jarvis');
+      let respostaCompleta = '';
 
       try {
         const response = await fetch('/api/chatjs', {
@@ -282,31 +288,63 @@
           body: JSON.stringify({ historico: historicoConversa })
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`Erro HTTP ${response.status}`);
+        }
 
-        if (response.ok && data.resposta) {
-          addMessage(data.resposta, 'jarvis');
-          falar(data.resposta);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
 
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Guarda pedaços incompletos de linhas
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.replace('data: ', '').trim();
+              if (!jsonStr) continue;
+
+              try {
+                const parsed = JSON.parse(jsonStr);
+
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+
+                const textoChunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (textoChunk) {
+                  respostaCompleta += textoChunk;
+                  jarvisMsgElement.innerText = respostaCompleta;
+                  chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+              } catch (e) {
+                // Ignora erros pontuais de parsing de JSON parcial
+              }
+            }
+          }
+        }
+
+        if (respostaCompleta) {
           historicoConversa.push({
             role: 'model',
-            parts: [{ text: data.resposta }]
+            parts: [{ text: respostaCompleta }]
           });
-          salvarNoLocalStorage();
-        } else {
-          historicoConversa.pop();
-          historicoChatVisual.pop();
+          historicoChatVisual.push({ text: respostaCompleta, sender: 'jarvis' });
           salvarNoLocalStorage();
 
-          const erroDetalhado = data.error || `Erro HTTP ${response.status}`;
-          renderizarMensagemNaTela(`Erro no servidor: ${erroDetalhado}`, 'jarvis');
+          // Sintetiza a voz assim que o texto termina de ser gerado na tela
+          falar(respostaCompleta);
         }
+
       } catch (error) {
         historicoConversa.pop();
-        historicoChatVisual.pop();
         salvarNoLocalStorage();
-
-        renderizarMensagemNaTela(`Falha de rede: ${error.message}`, 'jarvis');
+        jarvisMsgElement.innerText = `Erro no sistema: ${error.message}`;
       } finally {
         statusBadge.innerText = 'SISTEMA PRONTO';
       }
