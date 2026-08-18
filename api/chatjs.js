@@ -3,7 +3,6 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  // Recebe o histórico completo de mensagens
   const { historico } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -32,7 +31,6 @@ module.exports = async function handler(req, res) {
               4. Mantenha o tom calmo, levemente sofisticado, extremamente prestativo e com respostas diretas e curtas (ideais para conversação por áudio).`
             }]
           },
-          // Passa todo o histórico para manter a memória do contexto
           contents: historico
         })
       }
