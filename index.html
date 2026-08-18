@@ -33,6 +33,9 @@
       border-bottom: 1px solid rgba(0, 240, 255, 0.2);
       background: rgba(10, 15, 29, 0.8);
       backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     header h1 {
@@ -48,6 +51,26 @@
       font-size: 0.75rem;
       color: #70a1ff;
       letter-spacing: 1px;
+    }
+
+    .voice-selector {
+      margin-top: 10px;
+      width: 90%;
+      max-width: 320px;
+      background: rgba(5, 8, 17, 0.9);
+      color: #00f0ff;
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      outline: none;
+      cursor: pointer;
+      text-overflow: ellipsis;
+    }
+
+    .voice-selector option {
+      background: #050811;
+      color: #00f0ff;
     }
 
     #chat-container {
@@ -167,6 +190,7 @@
   <header>
     <h1>JARVIS</h1>
     <div class="status-badge" id="status">SISTEMA PRONTO</div>
+    <select id="voiceSelect" class="voice-selector" aria-label="Selecione a voz"></select>
   </header>
 
   <div id="chat-container">
@@ -195,12 +219,49 @@
     const sendBtn = document.getElementById('sendBtn');
     const micBtn = document.getElementById('micBtn');
     const statusBadge = document.getElementById('status');
+    const voiceSelect = document.getElementById('voiceSelect');
 
     const STORAGE_HISTORICO_API = 'jarvis_historico_api';
     const STORAGE_HISTORICO_CHAT = 'jarvis_historico_chat';
 
     let historicoConversa = JSON.parse(localStorage.getItem(STORAGE_HISTORICO_API)) || [];
     let historicoChatVisual = JSON.parse(localStorage.getItem(STORAGE_HISTORICO_CHAT)) || [];
+
+    let listaVozes = [];
+
+    function carregarVozes() {
+      if ('speechSynthesis' in window) {
+        listaVozes = window.speechSynthesis.getVoices();
+        voiceSelect.innerHTML = '';
+
+        const vozesPt = listaVozes.filter(v => v.lang.includes('pt'));
+
+        if (vozesPt.length === 0) {
+          const option = document.createElement('option');
+          option.textContent = 'Nenhuma voz em PT encontrada';
+          voiceSelect.appendChild(option);
+          return;
+        }
+
+        vozesPt.forEach((voz) => {
+          const option = document.createElement('option');
+          option.textContent = `${voz.name} (${voz.lang})`;
+          option.setAttribute('data-name', voz.name);
+          option.setAttribute('data-lang', voz.lang);
+          
+          if (voz.name.includes('Google') || voz.name.toLowerCase().includes('natural')) {
+            option.selected = true;
+          }
+          
+          voiceSelect.appendChild(option);
+        });
+      }
+    }
+
+    if ('speechSynthesis' in window) {
+      carregarVozes();
+      window.speechSynthesis.onvoiceschanged = carregarVozes;
+    }
 
     function salvarNoLocalStorage() {
       localStorage.setItem(STORAGE_HISTORICO_API, JSON.stringify(historicoConversa));
@@ -216,14 +277,20 @@
       }
     }
 
-    // Função de fala otimizada com voz mais rápida e tom encorpado
     function falar(texto) {
       if ('speechSynthesis' in window && texto.trim()) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(texto);
+
+        const selectedOption = voiceSelect.selectedOptions[0]?.getAttribute('data-name');
+        if (selectedOption) {
+          const vozEscolhida = listaVozes.find(v => v.name === selectedOption);
+          if (vozEscolhida) utterance.voice = vozEscolhida;
+        }
+
         utterance.lang = 'pt-BR';
-        utterance.rate = 1.3;  // Velocidade acelerada (1.3x)
-        utterance.pitch = 0.85; // Tom levemente mais grave
+        utterance.rate = 1.3;
+        utterance.pitch = 0.85;
         window.speechSynthesis.speak(utterance);
       }
     }
@@ -322,7 +389,7 @@
                   chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
               } catch (e) {
-                // Ignora JSONs parciais em leitura rápida
+                // Ignora erros pontuais de JSON parcial no stream
               }
             }
           }
@@ -336,7 +403,6 @@
           historicoChatVisual.push({ text: respostaCompleta, sender: 'jarvis' });
           salvarNoLocalStorage();
 
-          // Fala com a nova velocidade assim que a stream encerra
           falar(respostaCompleta);
         }
 
