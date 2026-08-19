@@ -1,43 +1,52 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
 export default async function handler(req, res) {
-    // Permite apenas requisições POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Método não permitido' });
     }
 
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ 
+            reply: 'Erro: A chave GEMINI_API_KEY não está cadastrada na Vercel.' 
+        });
+    }
+
+    const { message, userName } = req.body || {};
+
+    if (!message) {
+        return res.status(400).json({ error: 'Mensagem ausente' });
+    }
+
+    const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Mantenha respostas diretas e úteis.\n\nUsuário: ${message}`;
+
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        
-        // Verifica se a chave existe antes de chamar a API
-        if (!apiKey) {
-            console.error('ERRO: GEMINI_API_KEY não foi encontrada nas variáveis de ambiente.');
-            return res.status(500).json({ reply: 'Erro interno: Chave GEMINI_API_KEY não configurada na Vercel.' });
-        }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        const { message, userName } = req.body || {};
-        
-        if (!message) {
-            return res.status(400).json({ error: 'Mensagem não fornecida.' });
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: `Você é o J.A.R.V.I.S., uma inteligência artificial extremamente eficiente e cortês. Dirija-se sempre ao usuário pelo nome "${userName || 'Senhor'}".`
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: promptText }]
+                }]
+            })
         });
 
-        const result = await model.generateContent(message);
-        const response = await result.response;
-        const text = response.text();
+        const data = await response.json();
 
-        return res.status(200).json({ reply: text });
+        if (!response.ok) {
+            console.error('Erro da API Google:', data);
+            return res.status(500).json({ 
+                reply: `Erro da API Gemini: ${data.error?.message || 'Falha ao processar.'}` 
+            });
+        }
+
+        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta do sistema.';
+
+        return res.status(200).json({ reply: replyText });
 
     } catch (error) {
-        console.error('Erro de execução no backend:', error);
-        return res.status(500).json({ 
-            reply: `Falha no sistema J.A.R.V.I.S.: ${error.message || 'Erro desconhecido no servidor.'}` 
-        });
+        console.error('Erro de requisição:', error);
+        return res.status(500).json({ reply: `Erro interno no servidor: ${error.message}` });
     }
 }
