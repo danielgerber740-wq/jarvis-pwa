@@ -6,8 +6,8 @@ export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-        return res.status(500).json({ 
-            reply: 'Erro: A chave GEMINI_API_KEY não está cadastrada na Vercel.' 
+        return res.status(200).json({ 
+            reply: 'Erro: A variável GEMINI_API_KEY não foi encontrada nas configurações da Vercel.' 
         });
     }
 
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        const response = await fetch(url, {
+        const apiResponse = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -32,12 +32,12 @@ export default async function handler(req, res) {
             })
         });
 
-        const data = await response.json();
+        const data = await apiResponse.json();
 
-        if (!response.ok) {
-            console.error('Erro da API Google:', data);
-            return res.status(500).json({ 
-                reply: `Erro da API Gemini: ${data.error?.message || 'Falha ao processar.'}` 
+        if (!apiResponse.ok) {
+            const errorMsg = data.error?.message || 'Erro desconhecido da API Google';
+            return res.status(200).json({ 
+                reply: `Erro da API Gemini: ${errorMsg}` 
             });
         }
 
@@ -46,7 +46,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ reply: replyText });
 
     } catch (error) {
-        console.error('Erro de requisição:', error);
-        return res.status(500).json({ reply: `Erro interno no servidor: ${error.message}` });
+        return res.status(200).json({ 
+            reply: `Erro de execução interna: ${error.message}` 
+        });
     }
 }
