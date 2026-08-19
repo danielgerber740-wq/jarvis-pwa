@@ -10,7 +10,6 @@ chatForm.addEventListener('submit', async (e) => {
     
     if (!message) return;
 
-    // Exibe a mensagem do usuário no histórico
     appendMessage(userName, message);
     userInput.value = '';
 
@@ -21,9 +20,8 @@ chatForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({ message, userName })
         });
 
-        // Captura erros do servidor como 404 (rota não encontrada) ou 500 (chave ausente)
         if (!response.ok) {
-            throw new Error(`Servidor respondeu com Status ${response.status}`);
+            throw new Error(`Status ${response.status}`);
         }
 
         const data = await response.json();
@@ -32,25 +30,33 @@ chatForm.addEventListener('submit', async (e) => {
             appendMessage('J.A.R.V.I.S.', data.reply);
             speak(data.reply);
         } else {
-            appendMessage('J.A.R.V.I.S.', 'Erro ao processar a resposta.');
+            appendMessage('J.A.R.V.I.S.', 'Não posso responder agora. Reinicie o site');
         }
     } catch (error) {
-        console.error('Erro detalhado:', error);
-        appendMessage('J.A.R.V.I.S.', `Erro de conexão: ${error.message}`);
+        console.error('Erro:', error);
+        appendMessage('J.A.R.V.I.S.', 'Não posso responder agora. Reinicie o site');
     }
 });
 
 function appendMessage(sender, text) {
     const msgDiv = document.createElement('div');
-    msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    
+    // Remove marcadores e cria elementos de parágrafo (<p>)
+    let cleanText = text.replace(/[*#]/g, '');
+    const paragraphs = cleanText.split('\n').filter(p => p.trim() !== '');
+    const formattedText = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+
+    msgDiv.innerHTML = `<strong>${sender}:</strong>${formattedText}`;
     chatLog.appendChild(msgDiv);
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 function speak(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Interrompe áudios anteriores
-        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.cancel();
+        // Remove caracteres especiais antes de reproduzir a voz
+        const cleanSpeechText = text.replace(/[*#]/g, '');
+        const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
         utterance.lang = 'pt-BR';
         window.speechSynthesis.speak(utterance);
     }
