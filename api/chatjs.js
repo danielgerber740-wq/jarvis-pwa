@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
     if (!apiKey) {
         return res.status(200).json({ 
-            reply: 'Erro: A variável GEMINI_API_KEY não foi encontrada nas configurações da Vercel.' 
+            reply: 'Não posso responder agora. Reinicie o site' 
         });
     }
 
@@ -19,7 +19,6 @@ export default async function handler(req, res) {
 
     const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Mantenha respostas diretas e úteis.\n\nUsuário: ${message}`;
 
-    // Lista de modelos em ordem de preferência
     const modelsToTry = [
         'gemini-3.6-flash',
         'gemini-3-flash',
@@ -27,45 +26,44 @@ export default async function handler(req, res) {
     ];
 
     for (const modelName of modelsToTry) {
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-            const apiResponse = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            role: "user",
-                            parts: [{ text: promptText }]
-                        }
-                    ]
-                })
-            });
+                const apiResponse = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts: [{ text: promptText }] }]
+                    })
+                });
 
-            const data = await apiResponse.json();
+                const data = await apiResponse.json();
 
-            if (apiResponse.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                const replyText = data.candidates[0].content.parts[0].text;
-                return res.status(200).json({ reply: replyText });
+                if (apiResponse.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
+                }
+
+                if (data.error?.message?.includes('high demand') || apiResponse.status === 429) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+
+                if (data.error?.message?.includes('not found') || data.error?.message?.includes('no longer available')) {
+                    break; 
+                }
+
+                // Substituído qualquer outro erro retornado pela API
+                return res.status(200).json({ reply: 'Não posso responder agora. Reinicie o site' });
+
+            } catch (error) {
+                console.error(`Tentativa ${attempt + 1} falhou para o modelo ${modelName}:`, error);
             }
-
-            // Se for erro de modelo não encontrado/indisponível, tenta o próximo da lista
-            if (data.error?.message?.includes('not found') || data.error?.message?.includes('no longer available')) {
-                continue;
-            }
-
-            // Se for outro erro (ex: chave inválida ou quota), retorna o motivo
-            return res.status(200).json({ 
-                reply: `Erro da API Gemini: ${data.error?.message || 'Falha ao processar.'}` 
-            });
-
-        } catch (error) {
-            console.error(`Erro ao tentar o modelo ${modelName}:`, error);
         }
     }
 
+    // Retorno final caso todos os modelos ou tentativas falhem
     return res.status(200).json({ 
-        reply: 'Erro: Nenhum dos modelos Gemini suportados respondeu na sua conta.' 
+        reply: 'Não posso responder agora. Reinicie o site' 
     });
 }
