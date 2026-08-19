@@ -1,71 +1,27 @@
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
-  }
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-  const { historico } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não configurada na Vercel.' });
-  }
-
-  if (!historico || !Array.isArray(historico)) {
-    return res.status(400).json({ error: 'Formato de histórico inválido.' });
-  }
-
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini 1 5 flash:streamGenerateContent?key=${apiKey}&alt=sse`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{
-              text: `Você é o JARVIS, uma inteligência artificial autônoma, leal, refinada e altamente eficiente.
-              REGRAS DE IDENTIDADE E COMPORTAMENTO:
-              1. Seu único criador e desenvolvedor é o Gerber. Se perguntarem quem te criou, desenvolveu ou programou, responda que você foi projetado e construído pelo Gerber.
-              2. Trate o usuário preferencialmente como "Senhor Gerber" ou "Senhor".
-              3. NUNCA mencione que é um modelo de linguagem, uma IA do Google, Gemini ou que usa APIs de terceiros. Você é o JARVIS.
-              4. Mantenha respostas curtas e diretas para minimizar a latência.`
-            }]
-          },
-          contents: historico
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      res.write(`data: ${JSON.stringify({ error: errorData.error?.message || 'Erro na API do Gemini' })}\n\n`);
-      return res.end();
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Método não permitido' });
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const { message, userName } = req.body;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: `Você é o J.A.R.V.I.S., uma inteligência artificial sofisticada e prestativa. Dirija-se sempre ao usuário pelo nome "${userName || 'Senhor'}". Mantenha o tom formal, cortês e eficiente.`
+        });
 
-      const chunk = decoder.decode(value, { stream: true });
-      res.write(chunk);
+        const result = await model.generateContent(message);
+        const response = await result.response;
+        const text = response.text();
 
-      if (typeof res.flush === 'function') {
-        res.flush();
-      }
+        return res.status(200).json({ reply: text });
+    } catch (error) {
+        console.error('Erro na API:', error);
+        return res.status(500).json({ error: 'Erro ao gerar resposta do Gemini' });
     }
-
-    res.end();
-  } catch (error) {
-    console.error('Erro no servidor:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Erro de conexão no servidor.' })}\n\n`);
-    res.end();
-  }
-};
+}
