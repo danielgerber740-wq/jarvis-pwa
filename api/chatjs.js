@@ -7,14 +7,13 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não encontrada nas variáveis da Vercel.' });
+    return res.status(500).json({ error: 'Chave GEMINI_API_KEY não configurada na Vercel.' });
   }
 
   if (!historico || !Array.isArray(historico)) {
-    return res.status(400).json({ error: 'Histórico inválido.' });
+    return res.status(400).json({ error: 'Formato de histórico inválido.' });
   }
 
-  // Desativa buffer para garantir entrega contínua dos dados em tempo real
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -44,7 +43,7 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      res.write(`data: ${JSON.stringify({ error: errorData.error?.message || 'Erro na API Gemini' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ error: errorData.error?.message || 'Erro na API do Gemini' })}\n\n`);
       return res.end();
     }
 
@@ -66,7 +65,7 @@ module.exports = async function handler(req, res) {
     res.end();
   } catch (error) {
     console.error('Erro no servidor:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Erro interno no servidor.' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ error: 'Erro de conexão no servidor.' })}\n\n`);
     res.end();
   }
 };
