@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S.</title>
+    <title>J.A.R.V.I.S. Assistant</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,14 +11,15 @@
         <h1>J.A.R.V.I.S.</h1>
         
         <div class="user-config">
-            <label for="username">Identificação do Usuário:</label>
-            <input type="text" id="username" placeholder="Digite seu nome (ex: Gerber)" value="Gerber">
+            <label for="username">Seu Nome:</label>
+            <input type="text" id="username" placeholder="Digite seu nome (ex: Senhor Stark)">
         </div>
 
         <div id="chat-log" class="chat-log"></div>
 
         <form id="chat-form">
-            <input type="text" id="user-input" placeholder="Digite sua mensagem..." required autocomplete="off">
+            <input type="text" id="user-input" placeholder="Digite ou fale sua mensagem..." autocomplete="off">
+            <button type="button" id="mic-btn" title="Falar pelo microfone">🎤</button>
             <button type="submit">Enviar</button>
         </form>
     </div>
