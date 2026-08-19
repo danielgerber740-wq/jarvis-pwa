@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Mensagem ausente' });
     }
 
-    const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Mantenha respostas diretas e úteis.\n\nUsuário: ${message}`;
+    const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Escreva a resposta em formato de parágrafos de texto corrido e fluido. Não utilize símbolos de formatação Markdown como asteriscos, cerquilhas (#) ou tópicos com listas.\n\nUsuário: ${message}`;
 
     const modelsToTry = [
         'gemini-3.6-flash',
@@ -53,7 +53,6 @@ export default async function handler(req, res) {
                     break; 
                 }
 
-                // Substituído qualquer outro erro retornado pela API
                 return res.status(200).json({ reply: 'Não posso responder agora. Reinicie o site' });
 
             } catch (error) {
@@ -62,7 +61,6 @@ export default async function handler(req, res) {
         }
     }
 
-    // Retorno final caso todos os modelos ou tentativas falhem
     return res.status(200).json({ 
         reply: 'Não posso responder agora. Reinicie o site' 
     });
