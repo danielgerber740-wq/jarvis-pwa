@@ -19,10 +19,10 @@ export default async function handler(req, res) {
 
     const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Mantenha respostas diretas e úteis.\n\nUsuário: ${message}`;
 
-    // Lista de modelos suportados para tentar em sequência
+    // Lista de modelos em ordem de preferência
     const modelsToTry = [
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
+        'gemini-3.6-flash',
+        'gemini-3-flash',
         'gemini-1.5-flash-latest'
     ];
 
@@ -50,22 +50,22 @@ export default async function handler(req, res) {
                 return res.status(200).json({ reply: replyText });
             }
 
-            // Se for erro de modelo não encontrado, tenta o próximo da lista
-            if (data.error?.message?.includes('not found')) {
+            // Se for erro de modelo não encontrado/indisponível, tenta o próximo da lista
+            if (data.error?.message?.includes('not found') || data.error?.message?.includes('no longer available')) {
                 continue;
             }
 
-            // Se for outro erro (ex: chave inválida), retorna imediatamente
+            // Se for outro erro (ex: chave inválida ou quota), retorna o motivo
             return res.status(200).json({ 
                 reply: `Erro da API Gemini: ${data.error?.message || 'Falha ao processar.'}` 
             });
 
         } catch (error) {
-            console.error(`Erro ao tentar modelo ${modelName}:`, error);
+            console.error(`Erro ao tentar o modelo ${modelName}:`, error);
         }
     }
 
     return res.status(200).json({ 
-        reply: 'Erro: Nenhum dos modelos Gemini suportados respondeu na sua região/chave.' 
+        reply: 'Erro: Nenhum dos modelos Gemini suportados respondeu na sua conta.' 
     });
 }
