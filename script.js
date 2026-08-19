@@ -2,7 +2,49 @@ const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
 const userNameInput = document.getElementById('username');
 const chatLog = document.getElementById('chat-log');
+const micBtn = document.getElementById('mic-btn');
 
+// Configuração do Reconhecimento de Voz (Microfone)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        micBtn.style.backgroundColor = '#ff4444';
+        micBtn.innerText = '🎙️...';
+    };
+
+    recognition.onend = () => {
+        micBtn.style.backgroundColor = '';
+        micBtn.innerText = '🎤';
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+        // Envia a mensagem automaticamente após terminar de falar
+        chatForm.dispatchEvent(new Event('submit'));
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Erro no reconhecimento de voz:', event.error);
+        micBtn.style.backgroundColor = '';
+        micBtn.innerText = '🎤';
+    };
+
+    micBtn.addEventListener('click', () => {
+        recognition.start();
+    });
+} else {
+    micBtn.style.display = 'none'; // Esconde o botão se o navegador não suportar
+}
+
+// Envio de mensagens
 chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const message = userInput.value.trim();
@@ -30,18 +72,20 @@ chatForm.addEventListener('submit', async (e) => {
             appendMessage('J.A.R.V.I.S.', data.reply);
             speak(data.reply);
         } else {
-            appendMessage('J.A.R.V.I.S.', 'Não posso responder agora. Reinicie o site');
+            const errorMsg = 'Não posso responder agora. Reinicie o site';
+            appendMessage('J.A.R.V.I.S.', errorMsg);
+            speak(errorMsg);
         }
     } catch (error) {
         console.error('Erro:', error);
-        appendMessage('J.A.R.V.I.S.', 'Não posso responder agora. Reinicie o site');
+        const errorMsg = 'Não posso responder agora. Reinicie o site';
+        appendMessage('J.A.R.V.I.S.', errorMsg);
+        speak(errorMsg);
     }
 });
 
 function appendMessage(sender, text) {
     const msgDiv = document.createElement('div');
-    
-    // Remove marcadores e cria elementos de parágrafo (<p>)
     let cleanText = text.replace(/[*#]/g, '');
     const paragraphs = cleanText.split('\n').filter(p => p.trim() !== '');
     const formattedText = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
@@ -51,13 +95,15 @@ function appendMessage(sender, text) {
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
+// Leitura da resposta por Voz (Síntese)
 function speak(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        // Remove caracteres especiais antes de reproduzir a voz
+        window.speechSynthesis.cancel(); // Interrompe áudios anteriores
         const cleanSpeechText = text.replace(/[*#]/g, '');
         const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
         utterance.lang = 'pt-BR';
+        utterance.rate = 1.0; // Velocidade da fala
+        utterance.pitch = 1.0; // Tom da voz
         window.speechSynthesis.speak(utterance);
     }
 }
