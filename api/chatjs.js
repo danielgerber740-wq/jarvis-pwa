@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-1.5-flash",
-            systemInstruction: `Você é o J.A.R.V.I.S., uma inteligência artificial sofisticada e prestativa. Dirija-se sempre ao usuário pelo nome "${userName || 'Senhor'}". Mantenha o tom formal, cortês e eficiente.`
+            systemInstruction: `Você é o J.A.R.V.I.S., uma inteligência artificial sofisticada. Dirija-se sempre ao usuário pelo nome "${userName || 'Senhor'}".`
         });
 
         const result = await model.generateContent(message);
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ reply: text });
     } catch (error) {
-        console.error('Erro na API:', error);
-        return res.status(500).json({ error: 'Erro ao gerar resposta do Gemini' });
+        console.error('Erro no Gemini:', error);
+        return res.status(500).json({ error: error.message });
     }
 }
