@@ -19,58 +19,53 @@ export default async function handler(req, res) {
 
     const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Mantenha respostas diretas e úteis.\n\nUsuário: ${message}`;
 
-    try {
-        // Rota atualizada para o endpoint v1beta da API do Gemini
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Lista de modelos suportados para tentar em sequência
+    const modelsToTry = [
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash-latest'
+    ];
 
-        const apiResponse = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [
-                    {
-                        role: "user",
-                        parts: [{ text: promptText }]
-                    }
-                ]
-            })
-        });
+    for (const modelName of modelsToTry) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-        const data = await apiResponse.json();
+            const apiResponse = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [{ text: promptText }]
+                        }
+                    ]
+                })
+            });
 
-        if (!apiResponse.ok) {
-            const errorMsg = data.error?.message || 'Erro desconhecido da API Google';
-            
-            // Tentativa de fallback para gemini-2.5-flash se o 1.5 não estiver disponível na conta
-            if (errorMsg.includes('not found')) {
-                const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-                const fallbackResponse = await fetch(fallbackUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: promptText }] }]
-                    })
-                });
-                const fallbackData = await fallbackResponse.json();
-                
-                if (fallbackResponse.ok) {
-                    const fallbackText = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta do sistema.';
-                    return res.status(200).json({ reply: fallbackText });
-                }
+            const data = await apiResponse.json();
+
+            if (apiResponse.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                const replyText = data.candidates[0].content.parts[0].text;
+                return res.status(200).json({ reply: replyText });
             }
 
+            // Se for erro de modelo não encontrado, tenta o próximo da lista
+            if (data.error?.message?.includes('not found')) {
+                continue;
+            }
+
+            // Se for outro erro (ex: chave inválida), retorna imediatamente
             return res.status(200).json({ 
-                reply: `Erro da API Gemini: ${errorMsg}` 
+                reply: `Erro da API Gemini: ${data.error?.message || 'Falha ao processar.'}` 
             });
+
+        } catch (error) {
+            console.error(`Erro ao tentar modelo ${modelName}:`, error);
         }
-
-        const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta do sistema.';
-
-        return res.status(200).json({ reply: replyText });
-
-    } catch (error) {
-        return res.status(200).json({ 
-            reply: `Erro de execução interna: ${error.message}` 
-        });
     }
+
+    return res.status(200).json({ 
+        reply: 'Erro: Nenhum dos modelos Gemini suportados respondeu na sua região/chave.' 
+    });
 }
