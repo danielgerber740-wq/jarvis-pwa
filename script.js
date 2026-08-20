@@ -7,6 +7,7 @@ const micBtn = document.getElementById('mic-btn');
 const muteBtn = document.getElementById('mute-btn');
 
 let isMuted = false;
+const chatHistory = []; // Memória da conversa atual
 
 // Controle do Botão Mute
 muteBtn.addEventListener('click', () => {
@@ -76,7 +77,12 @@ chatForm.addEventListener('submit', async (e) => {
         const response = await fetch('/api/chatjs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, userName, mode })
+            body: JSON.stringify({ 
+                message, 
+                userName, 
+                mode,
+                history: chatHistory 
+            })
         });
 
         if (!response.ok) {
@@ -87,6 +93,11 @@ chatForm.addEventListener('submit', async (e) => {
         
         if (data.reply) {
             appendMessage('J.A.R.V.I.S.', data.reply);
+            
+            // Salva na memória do cliente
+            chatHistory.push({ sender: 'user', text: message });
+            chatHistory.push({ sender: 'model', text: data.reply });
+
             speak(data.reply);
         } else {
             const errorMsg = 'Não posso responder agora. Reinicie o site';
