@@ -1,8 +1,25 @@
 const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
 const userNameInput = document.getElementById('username');
+const modeSelect = document.getElementById('jarvis-mode');
 const chatLog = document.getElementById('chat-log');
 const micBtn = document.getElementById('mic-btn');
+const muteBtn = document.getElementById('mute-btn');
+
+let isMuted = false;
+
+// Controle do Botão Mute
+muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    if (isMuted) {
+        muteBtn.innerText = '🔇 Voz: DESLIGADA';
+        muteBtn.classList.add('muted');
+        window.speechSynthesis.cancel();
+    } else {
+        muteBtn.innerText = '🔊 Voz: LIGADA';
+        muteBtn.classList.remove('muted');
+    }
+});
 
 // Configuração do Reconhecimento de Voz (Microfone)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -27,7 +44,6 @@ if (SpeechRecognition) {
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         userInput.value = transcript;
-        // Envia a mensagem automaticamente após terminar de falar
         chatForm.dispatchEvent(new Event('submit'));
     };
 
@@ -41,7 +57,7 @@ if (SpeechRecognition) {
         recognition.start();
     });
 } else {
-    micBtn.style.display = 'none'; // Esconde o botão se o navegador não suportar
+    micBtn.style.display = 'none';
 }
 
 // Envio de mensagens
@@ -49,6 +65,7 @@ chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const message = userInput.value.trim();
     const userName = userNameInput.value.trim() || 'Senhor(a)';
+    const mode = modeSelect.value;
     
     if (!message) return;
 
@@ -59,7 +76,7 @@ chatForm.addEventListener('submit', async (e) => {
         const response = await fetch('/api/chatjs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, userName })
+            body: JSON.stringify({ message, userName, mode })
         });
 
         if (!response.ok) {
@@ -95,15 +112,17 @@ function appendMessage(sender, text) {
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
-// Leitura da resposta por Voz (Síntese)
+// Leitura por Voz com suporte ao Mute
 function speak(text) {
+    if (isMuted) return;
+
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Interrompe áudios anteriores
+        window.speechSynthesis.cancel();
         const cleanSpeechText = text.replace(/[*#]/g, '');
         const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
         utterance.lang = 'pt-BR';
-        utterance.rate = 1.0; // Velocidade da fala
-        utterance.pitch = 1.0; // Tom da voz
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
     }
 }
