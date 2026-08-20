@@ -5,9 +5,85 @@ const modeSelect = document.getElementById('jarvis-mode');
 const chatLog = document.getElementById('chat-log');
 const micBtn = document.getElementById('mic-btn');
 const muteBtn = document.getElementById('mute-btn');
+const spikeBtn = document.getElementById('spike-btn');
 
 let isMuted = false;
-const chatHistory = []; // Memória da conversa atual
+const chatHistory = [];
+
+// Variáveis para conexão Web Serial com o SPIKE
+let serialPort = null;
+let serialWriter = null;
+
+// Conexão com o LEGO SPIKE Prime via Web Serial / Bluetooth
+spikeBtn.addEventListener('click', async () => {
+    if (!("serial" in navigator)) {
+        alert("Seu navegador não suporta Web Serial API. Use o Google Chrome ou Microsoft Edge.");
+        return;
+    }
+
+    try {
+        if (!serialPort) {
+            // Solicita permissão para conectar à porta COM do SPIKE
+            serialPort = await navigator.serial.requestPort();
+            await serialPort.open({ baudRate: 115200 });
+
+            const textEncoder = new TextEncoderStream();
+            const writableStreamClosed = textEncoder.readable.pipeTo(serialPort.writable);
+            serialWriter = textEncoder.writable.getWriter();
+
+            spikeBtn.innerText = '🤖 SPIKE: CONECTADO';
+            spikeBtn.classList.add('connected');
+            appendMessage('J.A.R.V.I.S.', 'Sistemas robóticos online. Hub LEGO SPIKE pareado com sucesso.');
+        } else {
+            // Desconecta se já estiver conectado
+            if (serialWriter) await serialWriter.close();
+            await serialPort.close();
+            serialPort = null;
+            serialWriter = null;
+
+            spikeBtn.innerText = '🤖 SPIKE: DESCONECTADO';
+            spikeBtn.classList.remove('connected');
+            appendMessage('J.A.R.V.I.S.', 'Conexão com o Hub SPIKE encerrada.');
+        }
+    } catch (error) {
+        console.error('Erro de Conexão SPIKE:', error);
+        spikeBtn.innerText = '🤖 SPIKE: DESCONECTADO';
+        spikeBtn.classList.remove('connected');
+    }
+});
+
+// Envia comandos de texto para o SPIKE
+async function sendSpikeCommand(command) {
+    if (serialWriter) {
+        try {
+            await serialWriter.write(command + '\r\n');
+            console.log('Comando enviado para o SPIKE:', command);
+        } catch (err) {
+            console.error('Erro ao enviar dados para o SPIKE:', err);
+        }
+    }
+}
+
+// Analisa a resposta da IA para acionar os motores/LEDs do SPIKE
+function interpretRobotCommands(text) {
+    if (!serialWriter) return;
+
+    const lowerText = text.toLowerCase();
+
+    if (lowerText.includes('frente') || lowerText.includes('avançar') || lowerText.includes('andar')) {
+        sendSpikeCommand('FRENTE');
+    } else if (lowerText.includes('trás') || lowerText.includes('recuar') || lowerText.includes('ré')) {
+        sendSpikeCommand('TRAS');
+    } else if (lowerText.includes('direita')) {
+        sendSpikeCommand('DIREITA');
+    } else if (lowerText.includes('esquerda')) {
+        sendSpikeCommand('ESQUERDA');
+    } else if (lowerText.includes('parar') || lowerText.includes('pare') || lowerText.includes('desligar')) {
+        sendSpikeCommand('PARAR');
+    } else if (lowerText.includes('feliz') || lowerText.includes('sorrir') || lowerText.includes('olá')) {
+        sendSpikeCommand('FELIZ');
+    }
+}
 
 // Controle do Botão Mute
 muteBtn.addEventListener('click', () => {
@@ -22,7 +98,7 @@ muteBtn.addEventListener('click', () => {
     }
 });
 
-// Configuração do Reconhecimento de Voz (Microfone)
+// Reconhecimento de Voz
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 
@@ -85,18 +161,18 @@ chatForm.addEventListener('submit', async (e) => {
             })
         });
 
-        if (!response.ok) {
-            throw new Error(`Status ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Status ${response.status}`);
 
         const data = await response.json();
         
         if (data.reply) {
             appendMessage('J.A.R.V.I.S.', data.reply);
             
-            // Salva na memória do cliente
             chatHistory.push({ sender: 'user', text: message });
             chatHistory.push({ sender: 'model', text: data.reply });
+
+            // Envia o comando para o robô se estiver conectado
+            interpretRobotCommands(data.reply);
 
             speak(data.reply);
         } else {
@@ -123,7 +199,6 @@ function appendMessage(sender, text) {
     chatLog.scrollTop = chatLog.scrollHeight;
 }
 
-// Leitura por Voz com suporte ao Mute
 function speak(text) {
     if (isMuted) return;
 
