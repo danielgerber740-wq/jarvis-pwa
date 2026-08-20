@@ -11,13 +11,22 @@ export default async function handler(req, res) {
         });
     }
 
-    const { message, userName } = req.body || {};
+    const { message, userName, mode } = req.body || {};
 
     if (!message) {
         return res.status(400).json({ error: 'Mensagem ausente' });
     }
 
-    const promptText = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Escreva a resposta em formato de parágrafos de texto corrido e fluido. Não utilize símbolos de formatação Markdown como asteriscos, cerquilhas (#) ou tópicos com listas.\n\nUsuário: ${message}`;
+    // Configuração da personalidade baseada no modo
+    let systemInstruction = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Escreva em parágrafos de texto corrido e fluido sem usar símbolos de formatação Markdown (* ou #).`;
+
+    if (mode === 'brief') {
+        systemInstruction += ' Seja o mais sucinto e direto possível, respondendo em no máximo duas frases curtas.';
+    } else if (mode === 'coder') {
+        systemInstruction += ' Foque em resolver problemas de programação, sintaxe, lógica e código limpo de maneira prática e técnica.';
+    }
+
+    const promptText = `${systemInstruction}\n\nUsuário: ${message}`;
 
     const modelsToTry = [
         'gemini-3.6-flash',
