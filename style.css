@@ -100,7 +100,7 @@ h1 {
 }
 
 .chat-log div p {
-    margin-top: 4px;
+    margin-top: 6px;
     line-height: 1.5;
 }
 
@@ -125,7 +125,23 @@ h1 {
     border-color: #00d4ff;
 }
 
-#chat-form button {
+#mic-btn {
+    background-color: #1a2332;
+    border: 1px solid #334155;
+    color: #00d4ff;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#mic-btn:hover {
+    background-color: #334155;
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.3);
+}
+
+#chat-form button[type="submit"] {
     background-color: #00d4ff;
     color: #0b0e14;
     border: none;
@@ -137,11 +153,11 @@ h1 {
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-#chat-form button:hover {
+#chat-form button[type="submit"]:hover {
     background-color: #38edf2;
     box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
 }
 
-#chat-form button:active {
+#chat-form button[type="submit"]:active {
     transform: scale(0.98);
 }
