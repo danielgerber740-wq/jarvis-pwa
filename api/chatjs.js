@@ -11,13 +11,13 @@ export default async function handler(req, res) {
         });
     }
 
-    const { message, userName, mode } = req.body || {};
+    const { message, userName, mode, history = [] } = req.body || {};
 
     if (!message) {
         return res.status(400).json({ error: 'Mensagem ausente' });
     }
 
-    // Configuração da personalidade baseada no modo
+    // Definindo a personalidade com base no modo selecionado
     let systemInstruction = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Escreva em parágrafos de texto corrido e fluido sem usar símbolos de formatação Markdown (* ou #).`;
 
     if (mode === 'brief') {
@@ -26,7 +26,34 @@ export default async function handler(req, res) {
         systemInstruction += ' Foque em resolver problemas de programação, sintaxe, lógica e código limpo de maneira prática e técnica.';
     }
 
-    const promptText = `${systemInstruction}\n\nUsuário: ${message}`;
+    // Montando a estrutura de histórico para a API do Gemini
+    const contents = [];
+
+    // Adiciona o contexto do sistema como primeira interação do usuário
+    contents.push({
+        role: "user",
+        parts: [{ text: `[INSTRUÇÃO DE SISTEMA]: ${systemInstruction}` }]
+    });
+    contents.push({
+        role: "model",
+        parts: [{ text: `Entendido, ${userName || 'Senhor'}. Estou pronto para auxiliá-lo.` }]
+    });
+
+    // Anexa as últimas mensagens da conversa mantendo os papéis 'user' e 'model'
+    if (Array.isArray(history)) {
+        history.slice(-6).forEach(item => {
+            contents.push({
+                role: item.sender === 'user' ? 'user' : 'model',
+                parts: [{ text: item.text }]
+            });
+        });
+    }
+
+    // Adiciona a mensagem atual do usuário
+    contents.push({
+        role: "user",
+        parts: [{ text: message }]
+    });
 
     const modelsToTry = [
         'gemini-3.6-flash',
@@ -42,9 +69,7 @@ export default async function handler(req, res) {
                 const apiResponse = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: promptText }] }]
-                    })
+                    body: JSON.stringify({ contents })
                 });
 
                 const data = await apiResponse.json();
