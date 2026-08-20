@@ -10,7 +10,10 @@
     <div class="chat-container">
         <div class="header-control">
             <h1>J.A.R.V.I.S.</h1>
-            <button type="button" id="mute-btn" title="Alternar Voz">🔊 Voz: LIGADA</button>
+            <div class="header-buttons">
+                <button type="button" id="spike-btn" title="Conectar LEGO SPIKE">🤖 SPIKE: DESCONECTADO</button>
+                <button type="button" id="mute-btn" title="Alternar Voz">🔊 Voz: LIGADA</button>
+            </div>
         </div>
         
         <div class="user-config">
@@ -23,6 +26,7 @@
                 <label for="jarvis-mode">Modo de Operação:</label>
                 <select id="jarvis-mode">
                     <option value="default">Padrão (Cortês e Direto)</option>
+                    <option value="robot">Controle de Robótica (SPIKE Prime)</option>
                     <option value="brief">Resumido (Respostas Curtas)</option>
                     <option value="coder">Programador (Foco em Código e Lógica)</option>
                 </select>
@@ -32,7 +36,7 @@
         <div id="chat-log" class="chat-log"></div>
 
         <form id="chat-form">
-            <input type="text" id="user-input" placeholder="Digite ou fale sua mensagem..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Digite ou ordene um comando..." autocomplete="off">
             <button type="button" id="mic-btn" title="Falar pelo microfone">🎤</button>
             <button type="submit">Enviar</button>
         </form>
