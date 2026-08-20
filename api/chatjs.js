@@ -17,29 +17,31 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Mensagem ausente' });
     }
 
-    // Definindo a personalidade com base no modo selecionado
+    // Configuração do comportamento com base no modo selecionado
     let systemInstruction = `Você é o J.A.R.V.I.S., uma inteligência artificial elegante, cortês e altamente eficiente. Dirija-se sempre ao usuário como "${userName || 'Senhor'}". Escreva em parágrafos de texto corrido e fluido sem usar símbolos de formatação Markdown (* ou #).`;
 
-    if (mode === 'brief') {
+    if (mode === 'robot') {
+        systemInstruction += ' Você está conectado ao robô LEGO SPIKE Prime. Ao receber ordens físicas (como mover, andar, parar, virar ou sorrir), confirme a ação explicitamente na resposta usando palavras chave como "Avançar", "Trás", "Direita", "Esquerda", "Parar" ou "Feliz" para que o hub interprete os motores.';
+    } else if (mode === 'brief') {
         systemInstruction += ' Seja o mais sucinto e direto possível, respondendo em no máximo duas frases curtas.';
     } else if (mode === 'coder') {
         systemInstruction += ' Foque em resolver problemas de programação, sintaxe, lógica e código limpo de maneira prática e técnica.';
     }
 
-    // Montando a estrutura de histórico para a API do Gemini
+    // Estrutura do histórico enviada para a API
     const contents = [];
 
-    // Adiciona o contexto do sistema como primeira interação do usuário
+    // Instrução inicial de persona do J.A.R.V.I.S.
     contents.push({
         role: "user",
         parts: [{ text: `[INSTRUÇÃO DE SISTEMA]: ${systemInstruction}` }]
     });
     contents.push({
         role: "model",
-        parts: [{ text: `Entendido, ${userName || 'Senhor'}. Estou pronto para auxiliá-lo.` }]
+        parts: [{ text: `Entendido, ${userName || 'Senhor'}. Sistemas prontos para operação.` }]
     });
 
-    // Anexa as últimas mensagens da conversa mantendo os papéis 'user' e 'model'
+    // Anexa até 6 mensagens do histórico recente mantendo o contexto
     if (Array.isArray(history)) {
         history.slice(-6).forEach(item => {
             contents.push({
@@ -49,7 +51,7 @@ export default async function handler(req, res) {
         });
     }
 
-    // Adiciona a mensagem atual do usuário
+    // Anexa a mensagem atual do usuário
     contents.push({
         role: "user",
         parts: [{ text: message }]
@@ -78,6 +80,7 @@ export default async function handler(req, res) {
                     return res.status(200).json({ reply: data.candidates[0].content.parts[0].text });
                 }
 
+                // Trata indisponibilidade e faz retry rápido
                 if (data.error?.message?.includes('high demand') || apiResponse.status === 429) {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     continue;
