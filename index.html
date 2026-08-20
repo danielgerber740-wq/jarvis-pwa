@@ -8,11 +8,25 @@
 </head>
 <body>
     <div class="chat-container">
-        <h1>J.A.R.V.I.S.</h1>
+        <div class="header-control">
+            <h1>J.A.R.V.I.S.</h1>
+            <button type="button" id="mute-btn" title="Alternar Voz">🔊 Voz: LIGADA</button>
+        </div>
         
         <div class="user-config">
-            <label for="username">Seu Nome:</label>
-            <input type="text" id="username" placeholder="Digite seu nome (ex: Senhor Stark)">
+            <div class="config-group">
+                <label for="username">Seu Nome:</label>
+                <input type="text" id="username" placeholder="Digite seu nome (ex: Senhor Stark)">
+            </div>
+            
+            <div class="config-group">
+                <label for="jarvis-mode">Modo de Operação:</label>
+                <select id="jarvis-mode">
+                    <option value="default">Padrão (Cortês e Direto)</option>
+                    <option value="brief">Resumido (Respostas Curtas)</option>
+                    <option value="coder">Programador (Foco em Código e Lógica)</option>
+                </select>
+            </div>
         </div>
 
         <div id="chat-log" class="chat-log"></div>
